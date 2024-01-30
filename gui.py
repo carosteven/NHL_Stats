@@ -1,7 +1,7 @@
 import PySimpleGUI as sg
 from game_data import game_data
 
-# Auston Matthews GLAZER
+# Auston Matthews GLAZERSSS
 
 gd = game_data()
 
