@@ -1,6 +1,8 @@
 import PySimpleGUI as sg
 from game_data import game_data
 
+# Auston Matthews GLAZER
+
 gd = game_data()
 
 def update_scoreboard(window):
