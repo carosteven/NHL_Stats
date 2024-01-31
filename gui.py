@@ -1,7 +1,7 @@
 import PySimpleGUI as sg
 import time
 from game_data import game_data
-
+# This is a test to see if I get notifications
 def update_scoreboard(window):
     window["-SCOREBOARD-"].update(f"{gd.game_data['period']} per - {gd.game_data['timeRemaining']} remaining")
 
