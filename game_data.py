@@ -71,6 +71,8 @@ class game_data:
         # Get today's games
         self.games = self.get_schedule()
 
+        self.selected_game = {}
+
         # Selected game's data
         self.game_data = {}
     
@@ -107,6 +109,7 @@ class game_data:
                     "name": f"{player['firstName']['default']} {player['lastName']['default']}",
                     "sweaterNumber": player['sweaterNumber'],
                     "position": player['positionCode'],
+                    "playerId": player['playerId'],
                 }
                 playerInfo = []
                 for info in ['name', 'sweaterNumber', 'position']:
@@ -118,6 +121,7 @@ class game_data:
                     "name": f"{player['firstName']['default']} {player['lastName']['default']}",
                     "sweaterNumber": player['sweaterNumber'],
                     "position": player['positionCode'],
+                    "playerId": player['playerId'],
                 }
                 playerInfo = []
                 for info in ['name', 'sweaterNumber', 'position']:
@@ -149,7 +153,7 @@ class game_data:
             "homeOnIce": [],
         }
         
-        if not live_game_dict['gameState'] == 'FUT':
+        if not live_game_dict['gameState'] == 'FUT': # If game has started
             self.game_data["period"]= live_game_dict['period']
             self.game_data["timeRemaining"]= live_game_dict['clock']['timeRemaining']
             self.game_data["isIntermission"]= live_game_dict['clock']['inIntermission']
@@ -177,4 +181,31 @@ class game_data:
         # this is followed by a list of all players for both teams --> get player id's
         # play by play from first to last follows, including coords of event with center ice being 0,0 --> range: x: -100 to 100, y: -42 to 42 (in feet)
         # uses team and player id's
+
+    def get_live_stats(self, player, isAway=True):
+
+        live_game_endpoint = '/gamecenter/'
+        boxscore_endpoint = '/boxscore'
+        live_game_dict = requests.get(self.base_url + live_game_endpoint + str(self.selected_game['gameId']) + boxscore_endpoint).json()
+        info = []
+        if live_game_dict['gameState'] == 'FUT': # If game has not started
+            return info
+        
+        if isAway:
+            for pos in ['forwards', 'defense']:
+                for away_player in live_game_dict['boxscore']['playerByGameStats']['awayTeam'][pos]:
+                    if player['playerId'] == away_player['playerId']:
+                        info.append([away_player['name']['default']])
+                        for stat in ['goals', 'assists', 'shots', 'faceoffs']:
+                            info[0].append(away_player[stat])
+        
+        else:
+            for pos in ['forwards', 'defense']:
+                for home_player in live_game_dict['boxscore']['playerByGameStats']['homeTeam'][pos]:
+                    if player['playerId'] == home_player['playerId']:
+                        info.append([home_player['name']['default']])
+                        for stat in ['goals', 'assists', 'shots', 'faceoffs']:
+                            info[0].append(home_player[stat])
+
+        return info
 
