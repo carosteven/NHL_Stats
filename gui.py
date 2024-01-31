@@ -100,14 +100,14 @@ layout_column2 = [
 ]
 
 layout_column3 = [
-    [frame_live_stats],
-    [frame_stats],
+    [frame_live_stats,
+    frame_stats],
 ]
     
 layout = [
     [sg.Frame("", layout_column1),
-     sg.Frame("Scoreboard", layout_column2, title_location=sg.TITLE_LOCATION_TOP),
-     sg.Frame("Additional Information", layout_column3),],
+     sg.Frame("Scoreboard", layout_column2, title_location=sg.TITLE_LOCATION_TOP)],
+     [sg.Frame("Additional Information", layout_column3),],
 ]
 
 window = sg.Window("NHL Scoreboard", layout)
