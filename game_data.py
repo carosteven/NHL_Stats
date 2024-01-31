@@ -65,8 +65,8 @@ class game_data:
 
         # Get today's date
         self.today = datetime.today()
-        # self.today = self.today.strftime("%Y-%m-%d")
-        self.today = '2024-01-29'
+        self.today = self.today.strftime("%Y-%m-%d")
+        # self.today = '2024-01-29'
 
         # Get today's games
         self.games = self.get_schedule()

@@ -141,14 +141,26 @@ while True:
         if event == "-AWAY ROSTER-" or event == "-AWAY ON ICE-":
             for player in gd.game_data['awayRoster']:
                 if gd.game_data['awayRoster'][player]['combinedInfo'] == values[event][0]:
-                    headings, stats = gd.player_stats.get_player_stats(player=gd.game_data['awayRoster'][player]['name'])
-                    name = gd.game_data['awayRoster'][player]['name']
+                    if gd.game_data['awayRoster'][player]['position'] == 'G':
+                        # headings, stats = gd.player_stats.get_goalie_stats(player=gd.game_data['awayRoster'][player]['name'])
+                        name = "No stats available for goalies"
+                        continue
+                    
+                    else:
+                        headings, stats = gd.player_stats.get_player_stats(player=gd.game_data['awayRoster'][player]['name'])
+                        name = gd.game_data['awayRoster'][player]['name']
         
         if event == "-HOME ROSTER-" or event == "-HOME ON ICE-":
             for player in gd.game_data['homeRoster']:
                 if gd.game_data['homeRoster'][player]['combinedInfo'] == values[event][0]:
-                    headings, stats = gd.player_stats.get_player_stats(player=gd.game_data['homeRoster'][player]['name'])
-                    name = gd.game_data['homeRoster'][player]['name']
+                    if gd.game_data['homeRoster'][player]['position'] == 'G':
+                        # headings, stats = gd.player_stats.get_goalie_stats(player=gd.game_data['homeRoster'][player]['name'])
+                        name = "No stats available for goalies"
+                        continue
+
+                    else:
+                        headings, stats = gd.player_stats.get_player_stats(player=gd.game_data['homeRoster'][player]['name'])
+                        name = gd.game_data['homeRoster'][player]['name']
         
         window["-STAT NAME-"].update(value=name)
         window["-STATS-"].update(values=stats)
