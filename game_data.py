@@ -154,7 +154,7 @@ class game_data:
         }
         
         if not live_game_dict['gameState'] == 'FUT': # If game has started
-            self.game_data["period"]= live_game_dict['period']
+            self.game_data["period"]= live_game_dict['displayPeriod']
             self.game_data["timeRemaining"]= live_game_dict['clock']['timeRemaining']
             self.game_data["isIntermission"]= live_game_dict['clock']['inIntermission']
 
@@ -163,8 +163,8 @@ class game_data:
 
         self.get_roster(live_game_dict['rosterSpots'])
 
-        awayOnIce = live_game_dict['awayTeam']['onIce']
-        homeOnIce = live_game_dict['homeTeam']['onIce']
+        awayOnIce = live_game_dict['summary']['iceSurface']['awayTeam']['forwards'] + live_game_dict['summary']['iceSurface']['awayTeam']['defensemen']
+        homeOnIce = live_game_dict['summary']['iceSurface']['homeTeam']['forwards'] + live_game_dict['summary']['iceSurface']['homeTeam']['defensemen']
 
         onIce = []
         for player in awayOnIce:
@@ -193,18 +193,18 @@ class game_data:
         
         if isAway:
             for pos in ['forwards', 'defense']:
-                for away_player in live_game_dict['boxscore']['playerByGameStats']['awayTeam'][pos]:
+                for away_player in live_game_dict['playerByGameStats']['awayTeam'][pos]:
                     if player['playerId'] == away_player['playerId']:
                         info.append([away_player['name']['default']])
-                        for stat in ['goals', 'assists', 'shots', 'faceoffs']:
+                        for stat in ['goals', 'assists', 'sog', 'faceoffWinningPctg']:
                             info[0].append(away_player[stat])
         
         else:
             for pos in ['forwards', 'defense']:
-                for home_player in live_game_dict['boxscore']['playerByGameStats']['homeTeam'][pos]:
+                for home_player in live_game_dict['playerByGameStats']['homeTeam'][pos]:
                     if player['playerId'] == home_player['playerId']:
                         info.append([home_player['name']['default']])
-                        for stat in ['goals', 'assists', 'shots', 'faceoffs']:
+                        for stat in ['goals', 'assists', 'sog', 'faceoffWinningPctg']:
                             info[0].append(home_player[stat])
 
         return info
