@@ -67,7 +67,7 @@ class game_data:
         # Get today's date
         self.today = datetime.today()
         self.today = self.today.strftime("%Y-%m-%d")
-        # self.today = '2024-01-29'
+        # self.today = '2024-10-09'
 
         # Get today's games
         self.games = self.get_schedule()
@@ -213,3 +213,17 @@ class game_data:
 
         return info
 
+    def get_team_roster(self, teamAbb='WSH', season='20242025'):
+        roster = []
+
+        roster_endpoint = '/roster'
+        team_endpoint = f'/{teamAbb}'
+        season_endpoint = f'/{season}'
+        url = self.base_url + roster_endpoint + team_endpoint + season_endpoint
+        roster_df = requests.get(url).json()
+
+        for row in roster_df:
+            for player in roster_df[row]:
+                name = player['firstName']['default'] + ' ' + player['lastName']['default']
+                roster.append(name)
+        return roster
