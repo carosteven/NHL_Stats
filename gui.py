@@ -4,7 +4,14 @@ from game_data import game_data
 # Auston Matthews GLAZERSSS
 
 gd = game_data()
-
+teams = []
+players = []
+print('Collecting Data...')
+for game in gd.get_schedule():
+    teams.append(game['awayTeamName']['short'])
+    teams.append(game['homeTeamName']['short'])
+for team in teams:
+    players += gd.get_team_roster(teamAbb=team)
 
 def update_scoreboard(window):
     window["-SCOREBOARD-"].update(f"{gd.game_data['period']} per - {gd.game_data['timeRemaining']} remaining")
@@ -34,7 +41,6 @@ def add_parlay_leg(parlay_list, leg):
 
 
 def open_parlay_window():
-    players = ["Auston Matthews", "William Nylander"]
     stats = ["Goals", "Assists", "Shots"]
     numbers = [str(i) for i in range(1, 10)]
 
