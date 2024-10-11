@@ -108,8 +108,8 @@ def open_parlay_window():
     title_row = [
         sg.Text("Image", justification="center", key="-ImageTitle-", visible=False),
         sg.Text("Player", justification="center", key="-PlayerTitle-", visible=False, pad=((115, 0), (0, 0))),
-        sg.Text("Stat", justification="center", key="-StatTitle-", visible=False, pad=((80, 0), (0, 0))),
-        sg.Text("Number", justification="center", key="-NumberTitle-", visible=False, pad=((0, 0), (0, 0)))
+        sg.Text("Stat", justification="center", key="-StatTitle-", visible=False, pad=((83, 0), (0, 0))),
+        sg.Text("Number", justification="center", key="-NumberTitle-", visible=False, pad=((23, 0), (0, 0)))
     ]
 
     # The dropdown rows
@@ -168,6 +168,7 @@ def open_parlay_window():
                 parlay_window[f"-Image-{player_index}-"].update(data=resized_image_data)
 
         elif event == "Add Parlay":
+            VALID = True
             popup_str = ''
             num_legs = int(values["-numLegs-"])
             for i in range(num_legs):
@@ -178,15 +179,17 @@ def open_parlay_window():
 
                 # Create the leg and add it to the parlay list
                 leg = [player, stat, number]
+                if "" in leg:
+                    VALID = False
                 parlay_list = add_parlay_leg(parlay_list, leg)
                 if i == num_legs - 1:
                     popup_str += f"{player} {number}+ {stat}"
                 else:
                     popup_str += f"{player} {number}+ {stat}\n"
 
-            sg.popup(f"Added parlay:\n{popup_str}")
-
-            parlay_window.close()
+            if VALID:
+                sg.popup(f"Added parlay:\n{popup_str}")
+                parlay_window.close()
 
 
 game_list_column = [
