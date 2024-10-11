@@ -37,6 +37,7 @@ def short_2_long_name(short_name):
             "STL": "St. Louis Blues",
             "TBL": "Tampa Bay Lightning",
             "TOR": "Toronto Maple Leafs",
+            "UTA": "Utah Hockey Club",
             "VAN": "Vancouver Canucks",
             "VGK": "Vegas Golden Knights",
             "WPG": "Winnipeg Jets",
@@ -163,8 +164,11 @@ class game_data:
 
         self.get_roster(live_game_dict['rosterSpots'])
 
-        awayOnIce = live_game_dict['summary']['iceSurface']['awayTeam']['forwards'] + live_game_dict['summary']['iceSurface']['awayTeam']['defensemen']
-        homeOnIce = live_game_dict['summary']['iceSurface']['homeTeam']['forwards'] + live_game_dict['summary']['iceSurface']['homeTeam']['defensemen']
+        awayOnIce = []
+        homeOnIce = []
+        if not live_game_dict['gameState'] == 'FUT' and live_game_dict['summary']:
+            awayOnIce = live_game_dict['summary']['iceSurface']['awayTeam']['forwards'] + live_game_dict['summary']['iceSurface']['awayTeam']['defensemen']
+            homeOnIce = live_game_dict['summary']['iceSurface']['homeTeam']['forwards'] + live_game_dict['summary']['iceSurface']['homeTeam']['defensemen']
 
         onIce = []
         for player in awayOnIce:
