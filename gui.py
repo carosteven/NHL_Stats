@@ -1,18 +1,33 @@
 import PySimpleGUI as sg
 from game_data import game_data
+from PIL import Image
+from io import BytesIO
+import json
+
+with open('player2id.json', 'r') as file:
+    player2id = json.load(file)
 
 # Auston Matthews GLAZERSSS
 
 gd = game_data()
 teams = []
 players = []
+team_rosters = {}
 print('Collecting Data...')
 for game in gd.get_schedule():
-    teams.append(game['awayTeamName']['short'])
-    teams.append(game['homeTeamName']['short'])
+    teams.append([game['awayTeamName']['short'], game['awayTeamName']['long']])
+    teams.append([game['homeTeamName']['short'], game['homeTeamName']['long']])
+    team_rosters[game['awayTeamName']['long']] = []
+    team_rosters[game['homeTeamName']['long']] = []
 for team in teams:
-    players += gd.get_team_roster(teamAbb=team)
+    team_rosters[team[1]] += gd.get_team_roster(teamAbb=team[0])
 
+def resize_image(image_path, new_width, new_height):
+    image = Image.open(image_path)
+    image = image.resize((new_width, new_height), Image.LANCZOS)
+    bio = BytesIO()
+    image.save(bio, format="PNG")  # Save it as PNG in memory
+    return bio.getvalue()
 def update_scoreboard(window):
     window["-SCOREBOARD-"].update(f"{gd.game_data['period']} per - {gd.game_data['timeRemaining']} remaining")
 
@@ -39,48 +54,92 @@ def add_parlay_leg(parlay_list, leg):
     parlay_list.append(leg)
     return parlay_list
 
+def choose_game_window():
+    layout = [
+        [sg.Text("Choose a game from the list:")],
+        [sg.Listbox(values=games, enable_events=True, size=(max_len, len(games)), key="-GAME LIST-")],
+        [sg.Button("Close")]
+    ]
+    window = sg.Window("Choose Game", layout)
 
+    while True:
+        event, values = window.read()
+        if event == sg.WIN_CLOSED or event == "Close":
+            window.close()
+            break
+        elif event == "-GAME LIST-":
+            game = values["-GAME LIST-"][0]
+            window.close()
+            return game
+
+    return None
 def open_parlay_window():
+    chosenGame = choose_game_window()
+    chosenTeams = [chosenGame.split(" @ ")[0], chosenGame.split(" @ ")[1].split(" at ")[0]]
+    chosenPlayers = team_rosters[chosenTeams[0]] + team_rosters[chosenTeams[1]]
+
     stats = ["Goals", "Assists", "Shots"]
     numbers = [str(i) for i in range(1, 10)]
 
-    player_columns, stat_columns, number_columns = [], [], []
+    image_columns, player_columns, stat_columns, number_columns = [], [], [], []
 
+    rows = []
     for i in range(10):  # Predefine the max number of legs
-        player_columns.append(
-            [sg.Combo(players, key=f"-Player-{i}-", visible=False)]
-        )
-        stat_columns.append(
-            [sg.Combo(stats, key=f"-Stat-{i}-", visible=False)]
-        )
-        number_columns.append(
-            [sg.Combo(numbers, key=f"-Number-{i}-", visible=False)]
-        )
+        # resized_image_data = resize_image(r"C:\_Repos\NHL_Stats\Headshots\8477503.png", 35, 35)
+        # image_columns.append([sg.Image(resized_image_data, key=f"-Image-{i}-", visible=False)])
+        #
+        # # player_columns.append([sg.Text("", size=(1, 1))])
+        # player_columns.append([sg.Combo(chosenPlayers, key=f"-Player-{i}-", visible=False, enable_events=True)])
+        # stat_columns.append([sg.Combo(stats, key=f"-Stat-{i}-", visible=False)])
+        # number_columns.append([sg.Combo(numbers, key=f"-Number-{i}-", visible=False)])
+        # resized_image_data = resize_image(r"C:\_Repos\NHL_Stats\Headshots\8477503.png", 35, 35)
+
+        # Create a single row with image, player combo, stat combo, and number combo
+        row = [
+            sg.Image(data=None, key=f"-Image-{i}-", visible=False, size=(35, 35)),  # Image
+            sg.Combo(chosenPlayers, key=f"-Player-{i}-", visible=False, enable_events=True),  # Player Combo
+            sg.Combo(stats, key=f"-Stat-{i}-", visible=False),  # Stat Combo
+            sg.Combo(numbers, key=f"-Number-{i}-", visible=False)  # Number Combo
+        ]
+
+        rows.append(row)  # Add the row to the list
+
 
     title_row = [
-        sg.Text("Player", justification="center", key="-PlayerTitle-", visible=False),
-        sg.Text("Stat", justification="center", key="-StatTitle-", visible=False),
-        sg.Text("Number", justification="center", key="-NumberTitle-", visible=False)
+        sg.Text("Image", justification="center", key="-ImageTitle-", visible=False),
+        sg.Text("Player", justification="center", key="-PlayerTitle-", visible=False, pad=((115, 0), (0, 0))),
+        sg.Text("Stat", justification="center", key="-StatTitle-", visible=False, pad=((80, 0), (0, 0))),
+        sg.Text("Number", justification="center", key="-NumberTitle-", visible=False, pad=((0, 0), (0, 0)))
     ]
 
     # The dropdown rows
-    dropdown_rows = [
-        sg.Column([[title_row[0]]] + player_columns, key='-PlayerColumn-', element_justification="center"),
-        sg.Column([[title_row[1]]] + stat_columns, key='-StatColumn-', element_justification="center"),
-        sg.Column([[title_row[2]]] + number_columns, key='-NumberColumn-', element_justification="center")
-    ]
+    # dropdown_rows = [
+    #     sg.Column([[title_row[0]]] + image_columns, key='-ImageColumn-', element_justification="center"),
+    #     sg.Column([[title_row[1]]] + player_columns, key='-PlayerColumn-', element_justification="center"),
+    #     sg.Column([[title_row[2]]] + stat_columns, key='-StatColumn-', element_justification="center"),
+    #     sg.Column([[title_row[3]]] + number_columns, key='-NumberColumn-', element_justification="center")
+    # ]
 
+    # parlay_layout = [
+    #     [sg.Text("Number of Legs:"), sg.Combo([str(i) for i in range(1, 11)], key="-numLegs-", enable_events=True)],
+    #     dropdown_rows,
+    #     [sg.Button("Add Parlay", visible=False), sg.Button("Close", visible=False)]
+    # ]
     parlay_layout = [
         [sg.Text("Number of Legs:"), sg.Combo([str(i) for i in range(1, 11)], key="-numLegs-", enable_events=True)],
-        dropdown_rows,
-        [sg.Button("Add Parlay"), sg.Button("Close")]
+        title_row,  # Add title row before rows
+        *rows,  # Spread operator to add the rows dynamically
+        [sg.Button("Add Parlay", visible=False), sg.Button("Close", visible=False)]
     ]
     parlay_window = sg.Window("Create Parlay", parlay_layout)
 
     parlay_list = []
+
+
     while True:
         event, values = parlay_window.read()
         if event == sg.WIN_CLOSED or event == "Close":
+            parlay_window.close()
             break
         elif event == "-numLegs-":
             num_legs = int(values["-numLegs-"])
@@ -88,10 +147,26 @@ def open_parlay_window():
             parlay_window["-PlayerTitle-"].update(visible=(num_legs > 0))
             parlay_window["-StatTitle-"].update(visible=(num_legs > 0))
             parlay_window["-NumberTitle-"].update(visible=(num_legs > 0))
+            parlay_window["Add Parlay"].update(visible=True)
+            parlay_window["Close"].update(visible=True)
             for i in range(10):
+                # parlay_window[f"-Image-{i}-"].update(visible=(i < num_legs))
+                parlay_window[f"-Image-{i}-"].update(data=None, visible=(i < num_legs))
                 parlay_window[f"-Player-{i}-"].update(visible=(i < num_legs))
                 parlay_window[f"-Stat-{i}-"].update(visible=(i < num_legs))
                 parlay_window[f"-Number-{i}-"].update(visible=(i < num_legs))
+        elif "-Player-" in event:
+            # Find out which player combo was selected
+            player_index = int(event.split("-")[2])
+            selected_player = values[f"-Player-{player_index}-"]
+            if selected_player:
+
+                image_path = f"C:/_Repos/NHL_Stats/Headshots/{player2id[selected_player]}.png"
+                resized_image_data = resize_image(image_path, 35, 35)
+
+                # Make the corresponding image visible and update it
+                parlay_window[f"-Image-{player_index}-"].update(data=resized_image_data)
+
         elif event == "Add Parlay":
             popup_str = ''
             num_legs = int(values["-numLegs-"])
@@ -179,7 +254,6 @@ while True:
 
     if event == "Create Parlay":
         open_parlay_window()
-
     if event == "-GAME LIST-":
         # Get live data from selected game
         for game in gd.games:

@@ -213,7 +213,7 @@ class game_data:
 
         return info
 
-    def get_team_roster(self, teamAbb='WSH', season='20242025'):
+    def get_team_roster(self, teamAbb='TOR', season='20242025'):
         roster = []
 
         roster_endpoint = '/roster'
@@ -227,3 +227,7 @@ class game_data:
                 name = player['firstName']['default'] + ' ' + player['lastName']['default']
                 roster.append(name)
         return roster
+
+gd = game_data()
+roster = gd.get_team_roster()
+# print(roster)
