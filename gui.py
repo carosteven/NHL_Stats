@@ -3,12 +3,14 @@ from game_data import game_data
 from PIL import Image
 from io import BytesIO
 import json
+import time as time
 
 with open('player2id.json', 'r') as file:
     player2id = json.load(file)
 
 # Auston Matthews GLAZERSSS
 
+font = ('Courier New', 11)
 gd = game_data()
 teams = []
 players = []
@@ -220,16 +222,42 @@ scoreboard_home_column = [
     [sg.Listbox(values=[], enable_events=False, size=(30, 10), key="-HOME ON ICE-")],
 ]
 
+roster_away_column = [
+    [sg.Listbox(values=[], enable_events=True, size=(30, 10), key="-AWAY ROSTER-")],
+]
+
+roster_home_column = [
+    [sg.Listbox(values=[], enable_events=True, size=(30, 10), key="-HOME ROSTER-")],
+]
+
+live_stats_column = [
+    [sg.Table(values=[], headings=['Player', ' G ', ' A ', 'SOG', 'FO '], auto_size_columns=False, def_col_width=8, justification='center', key='-LIVE STATS-')],
+]
+
+stats_column = [
+    [sg.Text(size=(30, 1), key="-STAT NAME-")],
+    [sg.Table(values=[], headings=['Date', 'Opp', ' G ', ' A ', 'SOG'], auto_size_columns=False, def_col_width=8, justification='center', key='-STATS-')],
+]
+
 # ----- Make the frames -----
 frame_game_list = sg.Frame("Today's Games", game_list_column, title_location=sg.TITLE_LOCATION_TOP)
 frame_selected_game = sg.Frame("", scoreboard_viewer_column, border_width=0)
 frame_scoreboard_away = sg.Frame("Away", scoreboard_away_column, title_location=sg.TITLE_LOCATION_TOP)
 frame_scoreboard_home = sg.Frame("Home", scoreboard_home_column, title_location=sg.TITLE_LOCATION_TOP)
+frame_roster_away = sg.Frame("Away Roster", roster_away_column, title_location=sg.TITLE_LOCATION_TOP, visible=False, key="-AWAY ROSTER FRAME-")
+frame_roster_home = sg.Frame("Home Roster", roster_home_column, title_location=sg.TITLE_LOCATION_TOP, visible=False, key="-HOME ROSTER FRAME-")
+frame_live_stats = sg.Frame("Live Stats", live_stats_column, title_location=sg.TITLE_LOCATION_TOP, visible=False, key="-LIVE STATS FRAME-")
+frame_stats = sg.Frame("Stats", stats_column, title_location=sg.TITLE_LOCATION_TOP, visible=False, key="-STATS FRAME-")
+
 
 # ----- Full layout -----
 layout_column1 = [
     [
         frame_game_list,
+    ],
+    [
+        frame_roster_away,
+        frame_roster_home,
     ]
 ]
 
@@ -241,28 +269,105 @@ layout_column2 = [
     ],
 ]
 
+layout_column3 = [
+    [frame_live_stats,
+    frame_stats],
+]
+
 layout = [
     [sg.Button("Create Parlay")],
     [sg.Frame("", layout_column1),
      sg.Frame("Scoreboard", layout_column2, title_location=sg.TITLE_LOCATION_TOP)],
+    [sg.Frame("Additional Information", layout_column3)]
 ]
 
 window = sg.Window("NHL Scoreboard", layout)
 
+# Update every x seconds
+update_interval = 5
+
 # Run the Event Loop
 while True:
-    event, values = window.read()
+    event, values = window.read(timeout=1000)
     if event == "Exit" or event == sg.WIN_CLOSED:
         break
 
     if event == "Create Parlay":
         open_parlay_window()
+
     if event == "-GAME LIST-":
         # Get live data from selected game
         for game in gd.games:
             if game['awayTeamName']['long'] == values["-GAME LIST-"][0].split(" @ ")[0]:
+                gd.selected_game = game
                 gd.get_live_game_data(game)
 
+        # Update scoreboard
+        update_scoreboard(window)
+        window["-AWAY ROSTER FRAME-"].update(visible=True)
+        window["-HOME ROSTER FRAME-"].update(visible=True)
+
+        # Add rosters to screen
+        away_roster_list = []
+        for player in gd.game_data['awayRoster']:
+            away_roster_list.append(gd.game_data['awayRoster'][player]['combinedInfo'])
+
+        home_roster_list = []
+        for player in gd.game_data['homeRoster']:
+            home_roster_list.append(gd.game_data['homeRoster'][player]['combinedInfo'])
+
+        window["-AWAY ROSTER-"].update(away_roster_list)
+        window["-HOME ROSTER-"].update(home_roster_list)
+
+    if event == "-AWAY ROSTER-" or event == "-HOME ROSTER-" or event == "-AWAY ON ICE-" or event == "-HOME ON ICE-":
+        live_stats_headings = []
+        live_stats = []
+        stats_headings = []
+        stats = []
+        name = ""
+        if event == "-AWAY ROSTER-" or event == "-AWAY ON ICE-":
+            for player in gd.game_data['awayRoster']:
+                if gd.game_data['awayRoster'][player]['combinedInfo'] == values[event][0]:  # If this is the player selected
+                    if gd.game_data['awayRoster'][player]['position'] == 'G':
+                        # stats_headings, stats = gd.player_stats.get_goalie_stats(player=gd.game_data['awayRoster'][player]['name'])
+                        name = "No stats available for goalies"
+                        continue
+
+                    else:
+                        live_stats = gd.get_live_stats(gd.game_data['awayRoster'][player],True)  ##########################
+                        stats_headings, stats = gd.player_stats.get_player_stats(
+                            player=gd.game_data['awayRoster'][player]['name'])
+                        name = gd.game_data['awayRoster'][player]['name']
+
+        if event == "-HOME ROSTER-" or event == "-HOME ON ICE-":
+            for player in gd.game_data['homeRoster']:
+                if gd.game_data['homeRoster'][player]['combinedInfo'] == values[event][
+                    0]:  # If this is the player selected
+                    if gd.game_data['homeRoster'][player]['position'] == 'G':
+                        # stats_headings, stats = gd.player_stats.get_goalie_stats(player=gd.game_data['homeRoster'][player]['name'])
+                        name = "No stats available for goalies"
+                        continue
+
+                    else:
+                        live_stats = gd.get_live_stats(gd.game_data['homeRoster'][player], False)
+                        stats_headings, stats = gd.player_stats.get_player_stats(
+                            player=gd.game_data['homeRoster'][player]['name'])
+                        name = gd.game_data['homeRoster'][player]['name']
+
+        window["-STAT NAME-"].update(value=name)
+        # print(f"Stats: {stats}")
+        window["-STATS-"].update(values=stats)
+        window["-STATS FRAME-"].update(visible=True)
+
+        # print(f"Live stats: {live_stats}")
+        if live_stats != []:
+            window["-LIVE STATS-"].update(values=live_stats)
+            window["-LIVE STATS FRAME-"].update(visible=True)
+
+        # Live update
+    if round(time.time()) % update_interval == 0 and gd.selected_game != {}:
+        # print("Updating...")
+        gd.get_live_game_data(gd.selected_game)
         # Update scoreboard
         update_scoreboard(window)
 
