@@ -15,6 +15,11 @@ gd = game_data()
 teams = []
 players = []
 team_rosters = {}
+parlays = {}
+parlays = {'Chicago Blackhawks @ Winnipeg Jets at 08:00 PM': [['Connor Bedard', 'Shots', '4'], ['Alex Vlasic', 'Shots', '1']],
+           'Philadelphia Flyers @ Vancouver Canucks at 10:00 PM': [['Travis Konecny', 'Shots', '2'], ['Brock Boeser', 'Shots', '2'], ['J.T. Miller', 'Shots', '2'], ['Owen Tippett', 'Shots', '3']]}
+
+
 print('Collecting Data...')
 for game in gd.get_schedule():
     teams.append([game['awayTeamName']['short'], game['awayTeamName']['long']])
@@ -24,9 +29,15 @@ for game in gd.get_schedule():
 for team in teams:
     team_rosters[team[1]] += gd.get_team_roster(teamAbb=team[0])
 
-def resize_image(image_path, new_width, new_height):
+def resize_image(image_path, scale=None, new_width=None, new_height=None):
     image = Image.open(image_path)
-    image = image.resize((new_width, new_height), Image.LANCZOS)
+    w, h = [image.width, image.height]
+    if scale:
+        new_width = int(w * scale)
+        new_height = int(h * scale)
+        image = image.resize((new_width, new_height), Image.LANCZOS)
+    elif new_width and new_height:
+        image = image.resize((new_width, new_height), Image.LANCZOS)
     bio = BytesIO()
     image.save(bio, format="PNG")  # Save it as PNG in memory
     return bio.getvalue()
@@ -51,11 +62,6 @@ for game in gd.games:
     if len(games[-1]) > max_len:
         max_len = len(games[-1])
 
-
-def add_parlay_leg(parlay_list, leg):
-    parlay_list.append(leg)
-    return parlay_list
-
 def choose_game_window():
     layout = [
         [sg.Text("Choose a game from the list:")],
@@ -75,6 +81,108 @@ def choose_game_window():
             return game
 
     return None
+
+
+def open_tracker_window():
+    if len(parlays) == 0:
+        sg.popup("No parlays to track.")
+        return
+    else:
+        parlayCombo = []
+        # Creating a displayable format for each parlay
+        for key in parlays:
+            tempList = []
+            for leg in parlays[key]:
+                tempList.append(f"{leg[0]} {leg[2]}+ {leg[1]}")
+            parlayCombo.append(f"{', '.join(tempList)}")
+
+        # Ask which parlay you would like to track
+        layout = [
+            [sg.Combo(parlayCombo, key="-PARLAY CHOICE-", enable_events=True)],
+            [sg.Table(values=[], headings=['Player', ' G ', ' A ', 'SOG', 'FO '], auto_size_columns=False,
+                      def_col_width=8, justification='center', key='-LIVE STATS-', visible=False)],
+            [sg.Button("Submit"), sg.Button("Close")]
+        ]
+        window = sg.Window("Track Parlay", layout)
+
+        while True:
+            event, values = window.read()
+            if event == sg.WIN_CLOSED or event == "Close":
+                window.close()
+                break
+            elif event == "Submit":
+                window.close()
+                break
+            elif event == "-PARLAY CHOICE-":
+                # Get the selected parlay
+                parlay = values["-PARLAY CHOICE-"]
+                selected_parlay = None
+                for key in parlays:
+                    temp_parlay = []
+                    for leg in parlays[key]:
+                        temp_parlay.append(f"{leg[0]} {leg[2]}+ {leg[1]}")
+                    if parlay == f"{', '.join(temp_parlay)}":
+                        selected_parlay = parlays[key]
+                        game = key
+                        break
+
+                if selected_parlay:
+                    window['-LIVE STATS-'].update(visible=True)
+
+                    # Find the game being tracked
+                    for game_info in gd.get_schedule():
+                        if game_info['awayTeamName']['long'] in game or game_info['homeTeamName']['long'] in game:
+                            gd.selected_game = game_info
+                            gd.get_live_game_data(game_info)
+
+                            # Check if the selected team is the away or home team
+                            is_away = gd.game_data['awayTeamName']['long'] in game
+                            is_home = gd.game_data['homeTeamName']['long'] in game
+
+                            # Get the respective rosters
+                            away_roster = gd.game_data['awayRoster']
+                            home_roster = gd.game_data['homeRoster']
+
+                            # List to store live stats
+                            live_stats_data = []
+
+                            # Fetch live stats for each player in the parlay
+                            for leg in selected_parlay:
+                                player_name = leg[0]  # Player name from parlay
+
+                                # Search the player in the away roster first
+                                player_data = None
+                                for player_id, player_info in away_roster.items():
+                                    if player_info['name'] == player_name:
+                                        player_data = player_info
+                                        is_away = True
+                                        break
+
+                                # If player not found in away roster, search in home roster
+                                if not player_data:
+                                    for player_id, player_info in home_roster.items():
+                                        if player_info['name'] == player_name:
+                                            player_data = player_info
+                                            is_away = False
+                                            break
+
+                                # Fetch live stats if the player is found
+                                if player_data:
+                                    live_stats = gd.get_live_stats(player_data, is_away)
+                                    if live_stats:
+                                        # Append the live stats to the data list
+                                        live_stats_data.append(live_stats[0])
+                                    else:
+                                        live_stats_data.append(
+                                            [player_name, 'No data', 'No data', 'No data', 'No data'])
+
+                            # Update the table with the fetched live stats
+                            if live_stats_data:
+                                window['-LIVE STATS-'].update(values=live_stats_data)
+
+                            break
+
+
 def open_parlay_window():
     chosenGame = choose_game_window()
     chosenTeams = [chosenGame.split(" @ ")[0], chosenGame.split(" @ ")[1].split(" at ")[0]]
@@ -83,18 +191,8 @@ def open_parlay_window():
     stats = ["Goals", "Assists", "Shots"]
     numbers = [str(i) for i in range(1, 10)]
 
-    image_columns, player_columns, stat_columns, number_columns = [], [], [], []
-
     rows = []
     for i in range(10):  # Predefine the max number of legs
-        # resized_image_data = resize_image(r"C:\_Repos\NHL_Stats\Headshots\8477503.png", 35, 35)
-        # image_columns.append([sg.Image(resized_image_data, key=f"-Image-{i}-", visible=False)])
-        #
-        # # player_columns.append([sg.Text("", size=(1, 1))])
-        # player_columns.append([sg.Combo(chosenPlayers, key=f"-Player-{i}-", visible=False, enable_events=True)])
-        # stat_columns.append([sg.Combo(stats, key=f"-Stat-{i}-", visible=False)])
-        # number_columns.append([sg.Combo(numbers, key=f"-Number-{i}-", visible=False)])
-        # resized_image_data = resize_image(r"C:\_Repos\NHL_Stats\Headshots\8477503.png", 35, 35)
 
         # Create a single row with image, player combo, stat combo, and number combo
         row = [
@@ -106,7 +204,6 @@ def open_parlay_window():
 
         rows.append(row)  # Add the row to the list
 
-
     title_row = [
         sg.Text("Image", justification="center", key="-ImageTitle-", visible=False),
         sg.Text("Player", justification="center", key="-PlayerTitle-", visible=False, pad=((115, 0), (0, 0))),
@@ -114,19 +211,6 @@ def open_parlay_window():
         sg.Text("Number", justification="center", key="-NumberTitle-", visible=False, pad=((23, 0), (0, 0)))
     ]
 
-    # The dropdown rows
-    # dropdown_rows = [
-    #     sg.Column([[title_row[0]]] + image_columns, key='-ImageColumn-', element_justification="center"),
-    #     sg.Column([[title_row[1]]] + player_columns, key='-PlayerColumn-', element_justification="center"),
-    #     sg.Column([[title_row[2]]] + stat_columns, key='-StatColumn-', element_justification="center"),
-    #     sg.Column([[title_row[3]]] + number_columns, key='-NumberColumn-', element_justification="center")
-    # ]
-
-    # parlay_layout = [
-    #     [sg.Text("Number of Legs:"), sg.Combo([str(i) for i in range(1, 11)], key="-numLegs-", enable_events=True)],
-    #     dropdown_rows,
-    #     [sg.Button("Add Parlay", visible=False), sg.Button("Close", visible=False)]
-    # ]
     parlay_layout = [
         [sg.Text("Number of Legs:"), sg.Combo([str(i) for i in range(1, 11)], key="-numLegs-", enable_events=True)],
         title_row,  # Add title row before rows
@@ -164,7 +248,7 @@ def open_parlay_window():
             if selected_player:
 
                 image_path = f"C:/_Repos/NHL_Stats/Headshots/{player2id[selected_player]}.png"
-                resized_image_data = resize_image(image_path, 35, 35)
+                resized_image_data = resize_image(image_path, new_width=35, new_height=35)
 
                 # Make the corresponding image visible and update it
                 parlay_window[f"-Image-{player_index}-"].update(data=resized_image_data)
@@ -183,13 +267,14 @@ def open_parlay_window():
                 leg = [player, stat, number]
                 if "" in leg:
                     VALID = False
-                parlay_list = add_parlay_leg(parlay_list, leg)
+                parlay_list.append(leg)
                 if i == num_legs - 1:
                     popup_str += f"{player} {number}+ {stat}"
                 else:
                     popup_str += f"{player} {number}+ {stat}\n"
 
             if VALID:
+                parlays[chosenGame] = parlay_list
                 sg.popup(f"Added parlay:\n{popup_str}")
                 parlay_window.close()
 
@@ -275,7 +360,8 @@ layout_column3 = [
 ]
 
 layout = [
-    [sg.Button("Create Parlay")],
+    [sg.Button("Create Parlay"), sg.Push(), sg.Image(data=resize_image(r"C:\_Repos\NHL_Stats\MiscellaneousPictures\bet365.png", scale=0.2))],
+    [sg.Button("Track Parlay")],
     [sg.Frame("", layout_column1),
      sg.Frame("Scoreboard", layout_column2, title_location=sg.TITLE_LOCATION_TOP)],
     [sg.Frame("Additional Information", layout_column3)]
@@ -294,6 +380,9 @@ while True:
 
     if event == "Create Parlay":
         open_parlay_window()
+
+    if event == "Track Parlay":
+        open_tracker_window()
 
     if event == "-GAME LIST-":
         # Get live data from selected game

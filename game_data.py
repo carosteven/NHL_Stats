@@ -154,7 +154,7 @@ class game_data:
             "homeOnIce": [],
         }
         
-        if not live_game_dict['gameState'] == 'FUT': # If game has started
+        if not live_game_dict['gameState'] == 'FUT' and not live_game_dict['gameState'] == 'PRE': # If game has started
             self.game_data["period"]= live_game_dict['displayPeriod']
             self.game_data["timeRemaining"]= live_game_dict['clock']['timeRemaining']
             self.game_data["isIntermission"]= live_game_dict['clock']['inIntermission']
@@ -166,7 +166,7 @@ class game_data:
 
         awayOnIce = []
         homeOnIce = []
-        if not live_game_dict['gameState'] == 'FUT' and live_game_dict['summary']:
+        if not live_game_dict['gameState'] == 'FUT' and not live_game_dict['gameState'] == 'PRE' and live_game_dict['summary']:
             awayOnIce = live_game_dict['summary']['iceSurface']['awayTeam']['forwards'] + live_game_dict['summary']['iceSurface']['awayTeam']['defensemen']
             homeOnIce = live_game_dict['summary']['iceSurface']['homeTeam']['forwards'] + live_game_dict['summary']['iceSurface']['homeTeam']['defensemen']
 
@@ -192,7 +192,7 @@ class game_data:
         boxscore_endpoint = '/boxscore'
         live_game_dict = requests.get(self.base_url + live_game_endpoint + str(self.selected_game['gameId']) + boxscore_endpoint).json()
         info = []
-        if live_game_dict['gameState'] == 'FUT': # If game has not started
+        if live_game_dict['gameState'] == 'FUT' or live_game_dict['gameState'] == 'PRE': # If game has not started
             return info
         
         if isAway:
@@ -228,6 +228,42 @@ class game_data:
                 roster.append(name)
         return roster
 
-gd = game_data()
-roster = gd.get_team_roster()
-# print(roster)
+#
+# gd = game_data()
+#
+# # Fetch the schedule for today
+# games_today = gd.get_schedule()
+#
+# # Find the game where the Chicago Blackhawks are playing
+# chicago_game = None
+# for game in games_today:
+#     if game['awayTeamName']['long'] == 'Chicago Blackhawks' or game['homeTeamName']['long'] == 'Chicago Blackhawks':
+#         chicago_game = game
+#         break
+#
+# # Check if Chicago Blackhawks are playing today
+# if chicago_game:
+#     # Set the selected game
+#     gd.selected_game = chicago_game
+#
+#     # Fetch live game data for the game involving the Chicago Blackhawks
+#     gd.get_live_game_data(chicago_game)
+#
+#     # Print the live score
+#     print(
+#         f"Live Game: {gd.game_data['awayTeamName']['long']} {gd.game_data['awayScore']} vs {gd.game_data['homeTeamName']['long']} {gd.game_data['homeScore']}")
+#
+#     # Get live stats for all players on Chicago Blackhawks
+#     is_away = gd.game_data['awayTeamName']['long'] == 'Chicago Blackhawks'
+#     roster = gd.game_data['awayRoster'] if is_away else gd.game_data['homeRoster']
+#
+#     # Fetch live stats for each player on Chicago Blackhawks roster
+#     print("Live Stats for Chicago Blackhawks players:")
+#     for player_id, player_data in roster.items():
+#         live_stats = gd.get_live_stats(player_data, is_away)
+#         if live_stats:
+#             print(live_stats)
+#         else:
+#             print(f"No live stats available for {player_data['name']} yet.")
+# else:
+#     print("Chicago Blackhawks are not playing today.")

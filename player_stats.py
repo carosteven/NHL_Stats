@@ -63,3 +63,7 @@ class PlayerStats:
         return df[['gameDate', 'opponentTeamAbbrev', 'goals', 'assists', 'shots']].columns.values.tolist(), df[['gameDate', 'opponentTeamAbbrev', 'goals', 'assists', 'shots']].values.tolist()
 
         # df.to_csv('player_stats.csv', index=False)
+
+# ps = PlayerStats()
+# stats = ps.get_player_stats(player='Brock Boeser')
+# print(stats)
