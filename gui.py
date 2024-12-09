@@ -30,6 +30,7 @@ def resize_image(image_path, new_width, new_height):
     bio = BytesIO()
     image.save(bio, format="PNG")  # Save it as PNG in memory
     return bio.getvalue()
+
 def update_scoreboard(window):
     window["-SCOREBOARD-"].update(f"{gd.game_data['period']} per - {gd.game_data['timeRemaining']} remaining")
 
@@ -43,6 +44,51 @@ def update_scoreboard(window):
     window["-HOME SHOTS-"].update(f"Shots: {gd.game_data['homeShots']}")
     window["-HOME ON ICE-"].update(gd.game_data['homeOnIce'])
 
+# Update live stats
+def update_live_stats(window, event):
+    if event == "-AWAY ROSTER-" or event == "-HOME ROSTER-" or event == "-AWAY ON ICE-" or event == "-HOME ON ICE-":
+        live_stats_headings = []
+        live_stats = []
+        stats_headings = []
+        stats = []
+        name = ""
+        if event == "-AWAY ROSTER-" or event == "-AWAY ON ICE-":
+            for player in gd.game_data['awayRoster']:
+                if gd.game_data['awayRoster'][player]['combinedInfo'] == values[event][0]:  # If this is the player selected
+                    if gd.game_data['awayRoster'][player]['position'] == 'G':
+                        # stats_headings, stats = gd.player_stats.get_goalie_stats(player=gd.game_data['awayRoster'][player]['name'])
+                        name = "No stats available for goalies"
+                        continue
+
+                    else:
+                        live_stats = gd.get_live_stats(gd.game_data['awayRoster'][player], isAway = True)  ##########################
+                        stats_headings, stats = gd.player_stats.get_player_stats(
+                            player=gd.game_data['awayRoster'][player]['name'])
+                        name = gd.game_data['awayRoster'][player]['name']
+
+        if event == "-HOME ROSTER-" or event == "-HOME ON ICE-":
+            for player in gd.game_data['homeRoster']:
+                if gd.game_data['homeRoster'][player]['combinedInfo'] == values[event][0]:  # If this is the player selected
+                    if gd.game_data['homeRoster'][player]['position'] == 'G':
+                        # stats_headings, stats = gd.player_stats.get_goalie_stats(player=gd.game_data['homeRoster'][player]['name'])
+                        name = "No stats available for goalies"
+                        continue
+
+                    else:
+                        live_stats = gd.get_live_stats(gd.game_data['homeRoster'][player], isAway = False)
+                        stats_headings, stats = gd.player_stats.get_player_stats(
+                            player=gd.game_data['homeRoster'][player]['name'])
+                        name = gd.game_data['homeRoster'][player]['name']
+
+        window["-STAT NAME-"].update(value=name)
+        # print(f"Stats: {stats}")
+        window["-STATS-"].update(values=stats)
+        window["-STATS FRAME-"].update(visible=True)
+
+        # print(f"Live stats: {live_stats}")
+        if live_stats != []:
+            window["-LIVE STATS-"].update(values=live_stats)
+            window["-LIVE STATS FRAME-"].update(visible=True)
 
 games = []
 max_len = 0
@@ -75,6 +121,7 @@ def choose_game_window():
             return game
 
     return None
+
 def open_parlay_window():
     chosenGame = choose_game_window()
     chosenTeams = [chosenGame.split(" @ ")[0], chosenGame.split(" @ ")[1].split(" at ")[0]]
@@ -309,6 +356,8 @@ while True:
 
         # Add rosters to screen
         away_roster_list = []
+        print(gd.game_data)
+        input()
         for player in gd.game_data['awayRoster']:
             away_roster_list.append(gd.game_data['awayRoster'][player]['combinedInfo'])
 
@@ -319,50 +368,7 @@ while True:
         window["-AWAY ROSTER-"].update(away_roster_list)
         window["-HOME ROSTER-"].update(home_roster_list)
 
-    if event == "-AWAY ROSTER-" or event == "-HOME ROSTER-" or event == "-AWAY ON ICE-" or event == "-HOME ON ICE-":
-        live_stats_headings = []
-        live_stats = []
-        stats_headings = []
-        stats = []
-        name = ""
-        if event == "-AWAY ROSTER-" or event == "-AWAY ON ICE-":
-            for player in gd.game_data['awayRoster']:
-                if gd.game_data['awayRoster'][player]['combinedInfo'] == values[event][0]:  # If this is the player selected
-                    if gd.game_data['awayRoster'][player]['position'] == 'G':
-                        # stats_headings, stats = gd.player_stats.get_goalie_stats(player=gd.game_data['awayRoster'][player]['name'])
-                        name = "No stats available for goalies"
-                        continue
-
-                    else:
-                        live_stats = gd.get_live_stats(gd.game_data['awayRoster'][player],True)  ##########################
-                        stats_headings, stats = gd.player_stats.get_player_stats(
-                            player=gd.game_data['awayRoster'][player]['name'])
-                        name = gd.game_data['awayRoster'][player]['name']
-
-        if event == "-HOME ROSTER-" or event == "-HOME ON ICE-":
-            for player in gd.game_data['homeRoster']:
-                if gd.game_data['homeRoster'][player]['combinedInfo'] == values[event][
-                    0]:  # If this is the player selected
-                    if gd.game_data['homeRoster'][player]['position'] == 'G':
-                        # stats_headings, stats = gd.player_stats.get_goalie_stats(player=gd.game_data['homeRoster'][player]['name'])
-                        name = "No stats available for goalies"
-                        continue
-
-                    else:
-                        live_stats = gd.get_live_stats(gd.game_data['homeRoster'][player], False)
-                        stats_headings, stats = gd.player_stats.get_player_stats(
-                            player=gd.game_data['homeRoster'][player]['name'])
-                        name = gd.game_data['homeRoster'][player]['name']
-
-        window["-STAT NAME-"].update(value=name)
-        # print(f"Stats: {stats}")
-        window["-STATS-"].update(values=stats)
-        window["-STATS FRAME-"].update(visible=True)
-
-        # print(f"Live stats: {live_stats}")
-        if live_stats != []:
-            window["-LIVE STATS-"].update(values=live_stats)
-            window["-LIVE STATS FRAME-"].update(visible=True)
+    update_live_stats(window, event)
 
         # Live update
     if round(time.time()) % update_interval == 0 and gd.selected_game != {}:
